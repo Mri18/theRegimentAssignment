@@ -1,0 +1,38 @@
+services:
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - '6379:6379'
+
+  app:
+    build: .
+    container_name: node-app
+    command: node server.js
+    ports:
+      - '5000:5000'
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - NODE_ENV=development
+    depends_on:
+      - redis
+    volumes:
+      - ./:/app
+
+  worker:
+    build: .
+    container_name: node-worker
+    command: node queue/email.worker.js
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - NODE_ENV=development
+    depends_on:
+      - redis
+    volumes:
+      - ./:/app

@@ -2,6 +2,7 @@ const User = require('../users/user.model');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const emailQueue = require('../../queue/email.queue');
 
 const signup = async(data) => {
     const { name, email, password } = data;
@@ -106,7 +107,15 @@ const forgotPassword = async (email) => {
         await user.save();
 
         const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-
+        await emailQueue.add({
+            to: user.email,
+            subject: 'Password Reset Request',
+            text: `You requested a password reset. Click the link to reset your password: ${resetUrl}`
+        },
+        {
+            attempts: 3,
+            backoff: 5000
+        }); 
         console.log(`Password reset token (send via email): ${resetUrl}`);
     } catch (error) {
         throw error;
