@@ -35,30 +35,30 @@ const loginController = async (req, res, next) => {
 };
 
 const refreshTokenController = async (req, res, next) => {
-  try {
-    const refreshToken = req.cookies.refreshToken;
-    if (!refreshToken) {
-      return res.status(400).json({
-        success: false,
-        message: 'Refresh token missing'
-      });
+    try {
+        const refreshToken = req.cookies.refreshToken;
+        if (!refreshToken) {
+            return res.status(400).json({
+                success: false,
+                message: 'Refresh token missing'
+            });
+        }
+
+        const result = await authService.refreshAccessToken(refreshToken);
+
+        res.cookie('accessToken', result.accessToken, {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'strict'
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Access token refreshed',
+        });
+    } catch (error) {
+        next(error);
     }
-
-    const result = await authService.refreshAccessToken(refreshToken);
-    
-    res.cookie('accessToken', result.accessToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'strict'
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Access token refreshed',
-    });
-  } catch (error) {
-    next(error);
-  }
 };
 
 const logoutController = async (req, res, next) => {
@@ -81,7 +81,7 @@ const logoutController = async (req, res, next) => {
 const logoutAllController = async (req, res, next) => {
     try {
         const userId = req.user.id;
-        await authService.logoutAll(userId);    
+        await authService.logoutAll(userId);
 
         res.clearCookie('accessToken');
         res.clearCookie('refreshToken');
@@ -95,13 +95,34 @@ const logoutAllController = async (req, res, next) => {
     }
 };
 
-// const forgotPasswordController = (req, res) => {
-//   res.status(200).json({ message: 'Forgot password controller called' });
-// };
+const forgotPasswordController = async (req, res, next) => {
+    try {
+        const result = await authService.forgotPassword(req.body.email);
+        res.status(200).json({
+            success: true,
+            message: 'Password reset email sent',
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 
-// const resetPasswordController = (req, res) => {
-//   res.status(200).json({ message: 'Reset password controller called' });
-// };
+const resetPasswordController = async (req, res, next) => {
+    try {
+        await authService.resetPassword(
+            req.params.token,
+            req.body.password
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Password reset successful'
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
 
 module.exports = {
     signupController,
@@ -109,6 +130,6 @@ module.exports = {
     refreshTokenController,
     logoutController,
     logoutAllController,
-    //   forgotPasswordController,
-    //   resetPasswordController
+    forgotPasswordController,
+    resetPasswordController
 };

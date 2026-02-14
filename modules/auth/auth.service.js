@@ -1,6 +1,7 @@
 const User = require('../users/user.model');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const signup = async(data) => {
     const { name, email, password } = data;
@@ -90,10 +91,60 @@ const refreshAccessToken = async(refreshToken) => {
     return { accessToken: newAccessToken };
 }
 
+const forgotPassword = async (email) => {
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            throw new Error('User not found');
+        }
+        const resetToken = crypto.randomBytes(32).toString('hex');
+
+        const hashedResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        user.passwordResetToken = hashedResetToken;
+        user.passwordResetExpires = Date.now() + 3600000; // 1 hour
+
+        await user.save();
+
+        const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+        console.log(`Password reset token (send via email): ${resetUrl}`);
+    } catch (error) {
+        throw error;
+    }
+};
+
+const resetPassword = async (token, newPassword) => {
+    try {
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+        const user = await User.findOne({
+            passwordResetToken: hashedToken,
+            passwordResetExpires: { $gt: Date.now() }
+        }).select('+password');
+
+        if (!user) {
+            throw new Error('Invalid or expired password reset token');
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+        user.passwordResetToken = null;
+        user.passwordResetExpires = null;
+
+        user.refreshTokens = [];
+
+        await user.save();
+    } catch (error) {
+        throw error;
+    }
+};
+
 module.exports = {
     signup,
     login,
     logout,
     logoutAll,
-    refreshAccessToken
+    refreshAccessToken,
+    forgotPassword,
+    resetPassword
 };

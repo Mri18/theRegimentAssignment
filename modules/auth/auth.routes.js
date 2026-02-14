@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { signupController, loginController, logoutController, logoutAllController, refreshTokenController} = require('./auth.controller');
+const { signupController, loginController, logoutController, logoutAllController, refreshTokenController, forgotPasswordController, resetPasswordController} = require('./auth.controller');
 const authMiddleware = require('../../middlewares/auth.middleware');
 const {authLimiter} = require('../../middlewares/rate-limit.middleware');
 const authorizeRoles = require('../../middlewares/role.middleware');
@@ -9,6 +9,9 @@ router.post('/login', authLimiter, loginController);
 router.post('/logout', authMiddleware, logoutController);
 router.post('/logout-all', authMiddleware, logoutAllController);
 router.post('/refresh-token', refreshTokenController);
+router.post('/forgot-password', forgotPasswordController);
+router.post('/reset-password/:token', resetPasswordController);
+
 // router.get(
 //   '/protected',
 //   authMiddleware,
